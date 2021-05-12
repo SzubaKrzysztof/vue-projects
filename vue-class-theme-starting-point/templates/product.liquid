@@ -3,11 +3,16 @@
 
 <div id="product-page" class="product-page container">
   <div class="product-photo">
-    <img src="{{ featured_image | img_url: '500x', scale: 2 }}">
+    <transition name="fade">
+      <img :src="current_variant.image || fallback_product_image" :key="current_variant.image || fallback_product_image">
+      <!-- :key jest potrzebny do animacji vue -->
+      <!-- <img src="{{ featured_image | img_url: '500x', scale: 2 }}"> -->
+    </transition>
   </div>
   <div class="product-meta">
     <h1 class="product-title">{{ product.title }}</h1>
-    <div class="product-price">{{ product.price | money }}</div>
+    <div class="product-price" v-html="current_variant.price"></div>
+    <!-- <div class="product-price">{{ product.price | money }}</div> -->
     <div class="product-description">{{ product.description }}</div>
     {% if product.variants.size > 1 %}
       <div class="variant-select">
@@ -15,7 +20,8 @@
           <label for="{{ product_option.name }}">
             {{ product_option.name }}
           </label>
-          <select id="{{ product_option.name }}">
+          <select id="{{ product_option.name }}" v-model="variant_selection.option{{ product_option.position}}" @change="variant_from_options">
+          <!-- <select id="{{ product_option.name }}" tutaj nastąpiło data binding ||| product_option.position ma dostęp do obiektu variant selection -->
             {% for value in product_option.values %}
               <option {% if product_option.selected_value == value %}selected{% endif %}>
                 {{ value }}
@@ -26,7 +32,9 @@
       </div>
     {% endif %}
     <form action="/cart/add" method="post">
-      <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+      <input type="hidden" name="id" :value="current_variant_id">
+
+      <!-- 1 --------------<input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}"> ------":value" :to dało reaktywność vue-->
       <input type="hidden" name="quantity" value="1">
       <button type="submit" class="atc">
         Add to cart
@@ -34,3 +42,93 @@
     </form>
   </div>
 </div>
+
+<script>
+
+  const ProductPage = {
+
+    // fist we add data to store our data. 
+
+    data(){
+      return{
+        current_variant_id: "{{ product.selected_or_first_available_variant.id }}",
+        variant_selection: {
+          option1: "{{ product.options_with_values[0].selected_value }}",
+          option2: "{{ product.options_with_values[1].selected_value }}",
+          option3: "{{ product.options_with_values[3].selected_value }}",
+
+        },
+        variants: [
+          // tutaj iterujemy po produkcie i jego wariantach
+          {% for variant in product.variants %}
+          {
+            id: "{{ variant.id }}",
+            available: {{ variant.available }},
+            option1: "{{ variant.option1 }}",
+            option2: "{{ variant.option2 }}",
+            option3: "{{ variant.option3 }}",
+            price: "{{ variant.price | money }}",
+            // zdjęcie które chcę załadować 
+            {% assign img_url = variant.image.src | img_url: '500px', scale: 2%}
+            image: "{% unless img_url contains 'no-image' %}{{ img_url }}{% endunless %}"
+          },
+          {% endfor %}
+        ],
+          // zdjęcie króre pokaże się kiedy głowne zdjęcie nie zadziała
+          fallback_product_image: "{{ featured_image | img_url: '500px', scale:2 }}"
+
+        
+      }
+    },
+    computed:{
+      // dzięki tej metodzie mamy dostęp do pozostałych własciwości produktu jak np cena
+      current_variant(){
+        return this.variants.find(variant => variant.id == this.current_variant_id )
+      }
+
+    },
+    methods:{
+      // metoda @change sprawdza  wybrany wariant produktu z wariantami z shopify i zwraca id tego produktu
+      variant_from_options(){
+        // find() wyszukuje w array variants tego variantu który jest aktualnie wybrany na stronie przez dropdown
+        const variant = this.variants.find((variant) =>{
+          let match = true
+          if (variant.option1 != ''){
+            // tutaj po koleji sprawdza varianty ze strony z dostępnymi variantami z shopify
+            match = variant.option1 == this.variant_selection.option1
+          }
+          if (match && variant.option2 != '') {
+            match = variant.option2 == this.variant_selection.option2
+          }
+          if (match && variant.option3 != '') {
+            match = variant.option3 == this.variant_selection.option3
+          }
+          return match;
+        });
+        // 
+        this.current_variant_id = variant.id;
+        // tutaj calback 
+        this.update_history_state(variant);
+      },
+      update_history_state(variant){
+        if (!history.replaceState || !variant) {
+          return  ;
+        }
+        let newurl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?variant=' + variant.id;
+        window.history.replaceState({path: newurl}, '', newurl);
+      } 
+    }
+
+  }
+
+  Vue.createApp(ProductPage).mount('#product-page');
+
+</script>
+
+<!-- 1 tworzymy instancję vue i montujemy do storny przez id -->
+<!-- 2 tworzyć data() i przypisać ważne rzeczy które mająbyć rekatywne -->
+<!-- 3 dodawanie databinding z values do select id = " {{ ... }}" co połączyło pole wyboru rodzaju produktu z vue  -->
+<!-- 4 następnie trzeba połączyć variant selection na stronie z dostępnymi variantami z shopify dzięki metodom variant_from_options()-->
+<!-- metoda bierze variant produktu jaki jest na stronie -->
+<!-- 5 update_history_state()  daje możliwość zapisania wybranego aktualnie produktu. poprzez na siłę wklejenie url z odpowienim id produktu -->
+<!-- 6 computed_variants() daje  -->
