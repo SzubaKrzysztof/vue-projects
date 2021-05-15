@@ -3,25 +3,29 @@
     
     <div class="cart-table">
       
-        <template v-if="cart.items.length > 0">
-          
-              <div class="cart-row" v-for="item in cart.items">
-                <div class="cart-item-title" v-html="item.title"></div>
-                <img :src="item.image">
-                <div>
-                  <div class="cart-item-price" v-html="item.formatted_line_price"></div>
-                  <label>
-                    Qty
-                    <input type="number" class="cart-item-qty" v-model="item.quantity" @change="updateCart(item.variant_id, item.quantity )">
-                  </label>
-                </div>
-                <div class="cart-item-remove" @click="deleteProduct(item.variant_id)"><img src="{{ 'iconmonstr-trash-can-1.svg' | asset_url }}"></div>
-              </div>
-        
-        </template>
-        <template v-else>
-          Your cart is currently empty
-        </template>
+       <transition-group name="fade">
+         <div v-show="!loading">
+            <template v-if="cart.items.length > 0">
+              
+                  <div class="cart-row" v-for="item in cart.items" :key="item.variant_id" class="line">
+                    <div class="cart-item-title" v-html="item.title"></div>
+                    <img :src="item.image">
+                    <div>
+                      <div class="cart-item-price" v-html="item.formatted_line_price"></div>
+                      <label>
+                        Qty
+                        <input type="number" class="cart-item-qty" v-model="item.quantity" @change="updateCart(item.variant_id, item.quantity )">
+                      </label>
+                    </div>
+                    <div class="cart-item-remove" @click="deleteProduct(item.variant_id)"><img src="{{ 'iconmonstr-trash-can-1.svg' | asset_url }}"></div>
+                  </div>
+            
+            </template>
+            <template v-else>
+              Your cart is currently empty
+            </template>
+         </div>
+       </transition-group>
          
       
     </div>
@@ -39,16 +43,17 @@
 
  
 
-    <div class="cart-upsells" v-if="upsells.length > 0">
+    <div class="cart-upsells" v-if="filtered_upsells.length > 0">
       <h2>You might also like...</h2>
       
         <div class="cart-upsells-grid">
           
-            <template v-for="(upsell, index) in upsells" >
+            <template v-for="(upsell, index) in filtered_upsells" >
               <div class="cart-upsell-item" v-if="index < 4">
                 <div class="cart-upsell-title" v-html="upsell.title"></div>
                 <img class="cart-upsell-item-image" :src="upsell.image">
-                <a class="cart-upsell-atc-btn" @click="addToCart(upsell.variant_id)">Add to cart</a>
+                <a v-if="upsell.adding_upsell" class="cart-upsell-atc-btn cart-upsell-atc-btn--adding">Adding...</a> 
+                <a v-else class="cart-upsell-atc-btn" @click="addToCart(upsell.variant_id)">Add to cart</a>
               </div>
             </template>
          
@@ -72,10 +77,12 @@
             handle: "{{ product.handle }}",
             image: "{{product.featured_image | img_url: '400x', scale: 2}}",
             product_id: "{{product.id}}",
-            variant_id: "{{product.selected_or_first_available_variant.id}}"
+            variant_id: "{{product.selected_or_first_available_variant.id}}",
+            adding_upsell: false
           },
           {%endfor%}
-        ]
+        ],
+        loading: true
       }
     },
     created(){
@@ -86,9 +93,16 @@
       })
     },
 
+    computed:{
+      filtered_upsells(){
+        const products_in_cart = this.cart.items.map(item => item.product_id.toString());
+        return this.upsells.filter(upsell => !products_in_cart.includes(upsell.product_id));
+      }
+    },
+
     methods:{
       getCart(){
-        $.get('/cart.js')
+      $.get('/cart.js')
       .then(response => JSON.parse(response))
       .then(cart => {
         this.setCart(cart);
@@ -99,20 +113,25 @@
         $.post('/cart/update.js', `updates[${id}]=${qty}`)
         .then(response => JSON.parse(response))
         .then(cart => {
-          this.setCart(cart);
+        this.setCart(cart)
         })
       },
 
       setCart(cart){
         this.cart = cart
-        this.formatPrices();
+        this.formatPrices()
+        this.loading= false
       },
 
       deleteProduct(id){
-          this.updateCart(id, 0);
+        this.loading= true
+          this.updateCart(id, 0)
       }, 
 
       addToCart(id){
+        const upsell = this.upsells.find(upsell => upsell.variant_id == id);
+        this.loading= true;
+        upsell.adding_upsell = true;
         $.post('/cart/add.js', {
           items:[
             {
@@ -124,6 +143,7 @@
         .then(response => JSON.parse(response))
         .then(items => {
           this.getCart();
+          upsell.adding_upsell = false;
         })
       },
 
@@ -138,3 +158,7 @@
 
   Vue.createApp(CartPage).mount('#cart-page');
 </script>
+
+<!-- todo transition-group
+https://jsfiddle.net/andrisv/3g46bzk7/
+-->

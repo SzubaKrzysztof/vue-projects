@@ -204,14 +204,25 @@ table tr td {
     color: black;
     border: 1px solid black;
 }
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s ease;
+
+.line {
+	transition: all 1s;
 }
 
-.fade-enter-from,
+.fade-enter-active,
+.fade-leave-active {
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.fade-leave-active{
+    position: absolute;
+}
+
+.fade-enter,
 .fade-leave-to {
   opacity: 0;
+  transform: translateY(-80px);
 }
 
 /*** Mobile ***/
