@@ -5,11 +5,11 @@
     
     <div class="cart-table">
       
-       <transition-group name="fade">
+       <transition-group name="fade" :key="product_id">
          <div v-show="!loading">
             <template v-if="cart.items.length > 0">
               
-                  <div class="cart-row" v-for="item in cart.items" :key="item.variant_id" class="line">
+                  <div class="cart-row" v-for="item in cart.items" :key="product_id" class="line">
                     <div class="cart-item-title" v-html="item.title"></div>
                     <img :src="item.image">
                     <div>
