@@ -62,6 +62,26 @@
         </div>
     </div>
 
+ <div class="wrapper">
+   <div class="cart-upsells" v-if="filtered_upsells.length > 0">
+        <h2>Slider.</h2>
+            <div class="cart-upsells-flex">
+            <div class="carousel owl-carousel">
+              
+                <template v-for="(upsell, index) in filtered_upsells" >
+                  <div class="cart-upsell-item" v-if="index < 8">
+                    <div class="cart-upsell-title" v-html="upsell.title"></div>
+                    <img class="cart-upsell-item-image" :src="upsell.image">
+                    <a v-if="upsell.adding_upsell" class="cart-upsell-atc-btn cart-upsell-atc-btn--adding">Adding...</a> 
+                    <a v-else class="cart-upsell-atc-btn" @click="add_to_cart(upsell.variant_id)">Add to cart</a>
+                  </div>
+                </template>
+             
+            </div>
+          </div>
+      </div> 
+
+ </div>  
   
 </div>
 

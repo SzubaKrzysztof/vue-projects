@@ -1,6 +1,7 @@
 <template>
   <div class="home">
     <h1>Browse Our Selection</h1>
+ 
     <ProductDescriptionDrawer
       :product="product"
       :active="active"
@@ -11,6 +12,7 @@
         :key="i"
         :product="item"
         v-on:view-product="viewProduct($event)" />
+        <!-- <span>{{this.$store.getters.productQuantity(this.product)}}</span> -->
     </div>    
   </div>
 </template>
